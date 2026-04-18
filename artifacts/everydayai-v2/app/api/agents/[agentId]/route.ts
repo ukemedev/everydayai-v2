@@ -2,7 +2,6 @@ import { auth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import OpenAI from "openai"
-import { generateToken } from "@/lib/utils"
 
 export async function GET(
   req: Request,
