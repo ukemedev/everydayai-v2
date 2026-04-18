@@ -27,7 +27,7 @@ export async function DELETE(
 
   if (user.openaiApiKey && file.openaiFileId) {
     const client = new OpenAI({ apiKey: user.openaiApiKey })
-    await client.files.del(file.openaiFileId)
+    await client.files.delete(file.openaiFileId)
   }
 
   await db.knowledgeFile.delete({ where: { id: file.id } })
