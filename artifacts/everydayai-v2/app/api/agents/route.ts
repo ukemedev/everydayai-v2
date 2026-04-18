@@ -55,18 +55,18 @@ export async function POST(req: Request) {
   const { name, description, systemPrompt, model } = await req.json()
   const client = new OpenAI({ apiKey: user.openaiApiKey })
 
-  const assistant = await client.beta.assistants.create({
+  const assistant = await client.assistants.create({
     name,
     instructions: systemPrompt || "You are a helpful assistant.",
     model: model || "gpt-4o-mini",
     tools: [{ type: "file_search" }],
   })
 
-  const vectorStore = await client.beta.vectorStores.create({
+  const vectorStore = await client.vectorStores.create({
     name: `${name} Knowledge Base`,
   })
 
-  await client.beta.assistants.update(assistant.id, {
+  await client.assistants.update(assistant.id, {
     tool_resources: {
       file_search: { vector_store_ids: [vectorStore.id] },
     },

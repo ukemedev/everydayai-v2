@@ -61,7 +61,7 @@ export async function POST(
     purpose: "assistants",
   })
 
-  await client.beta.vectorStores.files.create(
+  await client.vectorStores.files.create(
     agent.openaiVectorStoreId!,
     { file_id: openaiFile.id }
   )
