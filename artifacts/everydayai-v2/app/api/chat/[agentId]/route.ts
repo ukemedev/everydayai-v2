@@ -24,7 +24,7 @@ async function runChat(
 
   while (run.status === "queued" || run.status === "in_progress") {
     await new Promise((r) => setTimeout(r, 1000))
-    run = await client.beta.threads.runs.retrieve(thread.id, run.id)
+    run = await client.beta.threads.runs.retrieve(run.id, { thread_id: thread.id })
   }
 
   if (run.status === "failed") {

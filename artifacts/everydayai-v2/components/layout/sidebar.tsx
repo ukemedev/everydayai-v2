@@ -80,7 +80,7 @@ export default function Sidebar() {
         alignItems: "center",
         gap: "10px",
       }}>
-        <UserButton afterSignOutUrl="/sign-in" />
+        <UserButton />
         <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>account</span>
       </div>
     </aside>
