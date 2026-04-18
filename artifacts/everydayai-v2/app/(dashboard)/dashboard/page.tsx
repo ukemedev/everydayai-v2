@@ -19,7 +19,7 @@ export default async function DashboardPage() {
 
   const plan = user.plan || "free"
   const agentLimit = PLAN_LIMITS[plan]
-  const publishedAgents = user.agents.filter(a => a.isPublished).length
+  const publishedAgents = user.agents.filter((a: { isPublished: boolean }) => a.isPublished).length
   const totalAgents = user.agents.length
 
   return (
