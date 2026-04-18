@@ -8,6 +8,7 @@ export async function DELETE(
   { params }: { params: Promise<{ agentId: string; fileId: string }> }
 ) {
   const { agentId, fileId } = await params
+
   const { userId } = await auth()
   if (!userId) return new NextResponse("Unauthorized", { status: 401 })
 
