@@ -68,7 +68,7 @@ export async function DELETE(
   if (user.openaiApiKey) {
     const client = new OpenAI({ apiKey: user.openaiApiKey })
     if (agent.openaiAssistantId) {
-      await client.assistants.delete(agent.openaiAssistantId)
+      await client.beta.assistants.delete(agent.openaiAssistantId)
     }
     if (agent.openaiVectorStoreId) {
       await client.vectorStores.delete(agent.openaiVectorStoreId)
