@@ -3,13 +3,23 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: EverydayAI v2 API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: agents
+    description: AI agent management
+  - name: chat
+    description: Agent chat operations
+  - name: knowledge
+    description: Knowledge base management
+  - name: billing
+    description: Billing and subscription
+  - name: dashboard
+    description: Dashboard and analytics
 paths:
   /healthz:
     get:
@@ -24,6 +34,267 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /agents:
+    get:
+      operationId: listAgents
+      tags: [agents]
+      summary: List all agents
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Agent"
+    post:
+      operationId: createAgent
+      tags: [agents]
+      summary: Create a new agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAgentBody"
+      responses:
+        "201":
+          description: Created agent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+
+  /agents/{agentId}:
+    get:
+      operationId: getAgent
+      tags: [agents]
+      summary: Get a specific agent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+    patch:
+      operationId: updateAgent
+      tags: [agents]
+      summary: Update an agent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAgentBody"
+      responses:
+        "200":
+          description: Updated agent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+    delete:
+      operationId: deleteAgent
+      tags: [agents]
+      summary: Delete an agent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /agents/{agentId}/messages:
+    get:
+      operationId: listMessages
+      tags: [chat]
+      summary: List chat messages for an agent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendMessage
+      tags: [chat]
+      summary: Send a message to an agent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "200":
+          description: Agent response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /knowledge:
+    get:
+      operationId: listKnowledgeItems
+      tags: [knowledge]
+      summary: List knowledge base items
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [document, url, text]
+      responses:
+        "200":
+          description: List of knowledge items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KnowledgeItem"
+    post:
+      operationId: createKnowledgeItem
+      tags: [knowledge]
+      summary: Create a knowledge item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKnowledgeItemBody"
+      responses:
+        "201":
+          description: Created knowledge item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeItem"
+
+  /knowledge/{itemId}:
+    delete:
+      operationId: deleteKnowledgeItem
+      tags: [knowledge]
+      summary: Delete a knowledge item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /billing/subscription:
+    get:
+      operationId: getSubscription
+      tags: [billing]
+      summary: Get current subscription status
+      responses:
+        "200":
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /billing/plans:
+    get:
+      operationId: listPlans
+      tags: [billing]
+      summary: List available plans
+      responses:
+        "200":
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plan"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +305,262 @@ components:
       required:
         - status
 
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        systemPrompt:
+          type: string
+        model:
+          type: string
+          enum: [gpt-4o, gpt-4o-mini, gpt-3.5-turbo]
+        temperature:
+          type: number
+        messageCount:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - name
+        - description
+        - systemPrompt
+        - model
+        - temperature
+        - messageCount
+        - isActive
+        - createdAt
+        - updatedAt
+
+    CreateAgentBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        systemPrompt:
+          type: string
+        model:
+          type: string
+          enum: [gpt-4o, gpt-4o-mini, gpt-3.5-turbo]
+        temperature:
+          type: number
+      required:
+        - name
+        - description
+        - systemPrompt
+        - model
+
+    UpdateAgentBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        systemPrompt:
+          type: string
+        model:
+          type: string
+          enum: [gpt-4o, gpt-4o-mini, gpt-3.5-turbo]
+        temperature:
+          type: number
+        isActive:
+          type: boolean
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        agentId:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        tokensUsed:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - agentId
+        - role
+        - content
+        - createdAt
+
+    SendMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    KnowledgeItem:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum: [document, url, text]
+        sourceUrl:
+          type: string
+        fileSize:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - title
+        - content
+        - type
+        - createdAt
+
+    CreateKnowledgeItemBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum: [document, url, text]
+        sourceUrl:
+          type: string
+      required:
+        - title
+        - content
+        - type
+
+    Subscription:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        status:
+          type: string
+          enum: [active, cancelled, past_due, trialing]
+        currentPeriodEnd:
+          type: string
+          format: date-time
+        messagesUsed:
+          type: integer
+        messagesLimit:
+          type: integer
+        agentsUsed:
+          type: integer
+        agentsLimit:
+          type: integer
+      required:
+        - plan
+        - status
+        - messagesUsed
+        - messagesLimit
+        - agentsUsed
+        - agentsLimit
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        interval:
+          type: string
+          enum: [month, year]
+        messagesLimit:
+          type: integer
+        agentsLimit:
+          type: integer
+        features:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - price
+        - currency
+        - interval
+        - messagesLimit
+        - agentsLimit
+        - features
+
+    DashboardStats:
+      type: object
+      properties:
+        totalAgents:
+          type: integer
+        activeAgents:
+          type: integer
+        totalMessages:
+          type: integer
+        messagesThisMonth:
+          type: integer
+        totalKnowledgeItems:
+          type: integer
+        tokensUsed:
+          type: integer
+      required:
+        - totalAgents
+        - activeAgents
+        - totalMessages
+        - messagesThisMonth
+        - totalKnowledgeItems
+        - tokensUsed
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [message_sent, agent_created, agent_updated, knowledge_added]
+        description:
+          type: string
+        agentName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - description
+        - createdAt
