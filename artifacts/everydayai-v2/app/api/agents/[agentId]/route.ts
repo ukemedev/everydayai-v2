@@ -6,8 +6,9 @@ import { generateToken } from "@/lib/utils"
 
 export async function GET(
   req: Request,
-  { params }: { params: { agentId: string } }
+  { params }: { params: Promise<{ agentId: string }> }
 ) {
+  const { agentId } = await params
   const { userId } = await auth()
   if (!userId) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -15,7 +16,7 @@ export async function GET(
   if (!user) return new NextResponse("User not found", { status: 404 })
 
   const agent = await db.agent.findFirst({
-    where: { id: Number(params.agentId), ownerId: user.id },
+    where: { id: Number(agentId), ownerId: user.id },
     include: { knowledgeFiles: true },
   })
 
@@ -25,8 +26,9 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { agentId: string } }
+  { params }: { params: Promise<{ agentId: string }> }
 ) {
+  const { agentId } = await params
   const { userId } = await auth()
   if (!userId) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -34,7 +36,7 @@ export async function PUT(
   if (!user) return new NextResponse("User not found", { status: 404 })
 
   const agent = await db.agent.findFirst({
-    where: { id: Number(params.agentId), ownerId: user.id },
+    where: { id: Number(agentId), ownerId: user.id },
   })
   if (!agent) return new NextResponse("Agent not found", { status: 404 })
 
@@ -50,8 +52,9 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { agentId: string } }
+  { params }: { params: Promise<{ agentId: string }> }
 ) {
+  const { agentId } = await params
   const { userId } = await auth()
   if (!userId) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -59,7 +62,7 @@ export async function DELETE(
   if (!user) return new NextResponse("User not found", { status: 404 })
 
   const agent = await db.agent.findFirst({
-    where: { id: Number(params.agentId), ownerId: user.id },
+    where: { id: Number(agentId), ownerId: user.id },
   })
   if (!agent) return new NextResponse("Agent not found", { status: 404 })
 

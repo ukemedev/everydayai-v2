@@ -5,8 +5,9 @@ import OpenAI from "openai"
 
 export async function GET(
   req: Request,
-  { params }: { params: { agentId: string } }
+  { params }: { params: Promise<{ agentId: string }> }
 ) {
+  const { agentId } = await params
   const { userId } = await auth()
   if (!userId) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -14,7 +15,7 @@ export async function GET(
   if (!user) return new NextResponse("User not found", { status: 404 })
 
   const agent = await db.agent.findFirst({
-    where: { id: Number(params.agentId), ownerId: user.id },
+    where: { id: Number(agentId), ownerId: user.id },
   })
   if (!agent) return new NextResponse("Agent not found", { status: 404 })
 
@@ -28,8 +29,9 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { agentId: string } }
+  { params }: { params: Promise<{ agentId: string }> }
 ) {
+  const { agentId } = await params
   const { userId } = await auth()
   if (!userId) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -44,7 +46,7 @@ export async function POST(
   }
 
   const agent = await db.agent.findFirst({
-    where: { id: Number(params.agentId), ownerId: user.id },
+    where: { id: Number(agentId), ownerId: user.id },
   })
   if (!agent) return new NextResponse("Agent not found", { status: 404 })
 

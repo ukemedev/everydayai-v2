@@ -39,10 +39,11 @@ async function runChat(
 
 export async function POST(
   req: Request,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
+  const { token } = await params
   const agent = await db.agent.findFirst({
-    where: { widgetToken: params.token, isPublished: true },
+    where: { widgetToken: token, isPublished: true },
     include: { owner: true },
   })
 
