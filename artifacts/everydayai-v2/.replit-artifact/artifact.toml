@@ -12,20 +12,15 @@ version = "1.0.0"
 [[services]]
 name = "web"
 paths = [ "/" ]
-localPort = 25163
+localPort = 3000
 
 [services.development]
 run = "pnpm --filter @workspace/everydayai-v2 run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/everydayai-v2", "run", "build" ]
-publicDir = "artifacts/everydayai-v2/dist/public"
-serve = "static"
-
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+run = "pnpm --filter @workspace/everydayai-v2 run start"
 
 [services.env]
-PORT = "25163"
+PORT = "3000"
 BASE_PATH = "/"
