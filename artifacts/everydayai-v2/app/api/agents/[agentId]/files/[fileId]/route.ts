@@ -1,19 +1,15 @@
-import { auth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
+import { ensureUser } from "@/lib/ensure-user"
 import { db } from "@/lib/db"
 import OpenAI from "openai"
 
 export async function DELETE(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ agentId: string; fileId: string }> }
 ) {
   const { agentId, fileId } = await params
-
-  const { userId } = await auth()
-  if (!userId) return new NextResponse("Unauthorized", { status: 401 })
-
-  const user = await db.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return new NextResponse("User not found", { status: 404 })
+  const user = await ensureUser()
+  if (!user) return new NextResponse("Unauthorized", { status: 401 })
 
   const agent = await db.agent.findFirst({
     where: { id: Number(agentId), ownerId: user.id },
@@ -26,8 +22,12 @@ export async function DELETE(
   if (!file) return new NextResponse("File not found", { status: 404 })
 
   if (user.openaiApiKey && file.openaiFileId) {
-    const client = new OpenAI({ apiKey: user.openaiApiKey })
-    await client.files.delete(file.openaiFileId)
+    try {
+      const client = new OpenAI({ apiKey: user.openaiApiKey })
+      await client.files.delete(file.openaiFileId)
+    } catch {
+      // If OpenAI delete fails, still remove from DB
+    }
   }
 
   await db.knowledgeFile.delete({ where: { id: file.id } })

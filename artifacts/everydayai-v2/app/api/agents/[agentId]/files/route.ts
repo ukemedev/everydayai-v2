@@ -1,18 +1,15 @@
-import { auth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
+import { ensureUser } from "@/lib/ensure-user"
 import { db } from "@/lib/db"
 import OpenAI from "openai"
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params
-  const { userId } = await auth()
-  if (!userId) return new NextResponse("Unauthorized", { status: 401 })
-
-  const user = await db.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return new NextResponse("User not found", { status: 404 })
+  const user = await ensureUser()
+  if (!user) return new NextResponse("Unauthorized", { status: 401 })
 
   const agent = await db.agent.findFirst({
     where: { id: Number(agentId), ownerId: user.id },
@@ -32,17 +29,11 @@ export async function POST(
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params
-  const { userId } = await auth()
-  if (!userId) return new NextResponse("Unauthorized", { status: 401 })
-
-  const user = await db.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return new NextResponse("User not found", { status: 404 })
+  const user = await ensureUser()
+  if (!user) return new NextResponse("Unauthorized", { status: 401 })
 
   if (!user.openaiApiKey) {
-    return NextResponse.json(
-      { error: "No OpenAI API key found." },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: "No OpenAI API key found." }, { status: 400 })
   }
 
   const agent = await db.agent.findFirst({
@@ -56,15 +47,11 @@ export async function POST(
 
   const client = new OpenAI({ apiKey: user.openaiApiKey })
 
-  const openaiFile = await client.files.create({
-    file,
-    purpose: "assistants",
-  })
+  const openaiFile = await client.files.create({ file, purpose: "assistants" })
 
-  await client.vectorStores.files.create(
-    agent.openaiVectorStoreId!,
-    { file_id: openaiFile.id }
-  )
+  await client.vectorStores.files.create(agent.openaiVectorStoreId!, {
+    file_id: openaiFile.id,
+  })
 
   const knowledgeFile = await db.knowledgeFile.create({
     data: {
