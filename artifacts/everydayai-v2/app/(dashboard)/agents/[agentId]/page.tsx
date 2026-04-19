@@ -23,6 +23,23 @@ interface KnowledgeFile {
   createdAt: string
 }
 
+interface AgentTool {
+  id: number
+  name: string
+  description: string
+  method: string
+  url: string
+  parameters: unknown
+  createdAt: string
+}
+
+interface ToolParam {
+  name: string
+  description: string
+  type: string
+  required: boolean
+}
+
 interface Message {
   role: "user" | "assistant"
   content: string
@@ -89,6 +106,15 @@ export default function AgentStudioPage() {
   const [deletingFileId, setDeletingFileId] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Tools
+  const [tools, setTools] = useState<AgentTool[]>([])
+  const [showAddToolModal, setShowAddToolModal] = useState(false)
+  const [addingTool, setAddingTool] = useState(false)
+  const [toolFormError, setToolFormError] = useState("")
+  const [deletingToolId, setDeletingToolId] = useState<number | null>(null)
+  const [toolForm, setToolForm] = useState({ name: "", description: "", method: "POST", url: "" })
+  const [toolParams, setToolParams] = useState<ToolParam[]>([])
+
   useEffect(() => { loadAgent() }, [agentId])
 
   useEffect(() => {
@@ -100,15 +126,17 @@ export default function AgentStudioPage() {
     setLoading(true)
     setError("")
     try {
-      const [agentRes, filesRes] = await Promise.all([
+      const [agentRes, filesRes, toolsRes] = await Promise.all([
         axios.get(`/api/agents/${agentId}`),
         axios.get(`/api/agents/${agentId}/files`),
+        axios.get(`/api/agents/${agentId}/tools`),
       ])
       const a: Agent = agentRes.data
       setAgent(a)
       setSystemPrompt(a.systemPrompt || "")
       setSelectedModel(a.model || "gpt-4o-mini")
       setFiles(filesRes.data)
+      setTools(toolsRes.data)
       setIsDirty(false)
     } catch {
       setError("Failed to load agent.")
@@ -211,6 +239,67 @@ export default function AgentStudioPage() {
     } finally {
       setDeletingFileId(null)
     }
+  }
+
+  function openAddToolModal() {
+    setToolForm({ name: "", description: "", method: "POST", url: "" })
+    setToolParams([])
+    setToolFormError("")
+    setShowAddToolModal(true)
+  }
+
+  async function addTool() {
+    const { name, description, method, url } = toolForm
+    if (!name.trim() || !description.trim() || !url.trim()) {
+      setToolFormError("Name, description, and URL are all required.")
+      return
+    }
+    setAddingTool(true)
+    setToolFormError("")
+    try {
+      const parameters = toolParams.length > 0
+        ? {
+            type: "object",
+            properties: Object.fromEntries(
+              toolParams.map((p) => [p.name, { type: p.type, description: p.description }])
+            ),
+            required: toolParams.filter((p) => p.required).map((p) => p.name),
+          }
+        : null
+      const res = await axios.post(`/api/agents/${agentId}/tools`, {
+        name, description, method, url, parameters,
+      })
+      setTools((prev) => [...prev, res.data])
+      setShowAddToolModal(false)
+    } catch (e: any) {
+      setToolFormError(e.response?.data?.error || "Failed to add tool.")
+    } finally {
+      setAddingTool(false)
+    }
+  }
+
+  async function deleteTool(toolId: number) {
+    setDeletingToolId(toolId)
+    try {
+      await axios.delete(`/api/agents/${agentId}/tools/${toolId}`)
+      setTools((prev) => prev.filter((t) => t.id !== toolId))
+    } catch {
+      // ignore
+    } finally {
+      setDeletingToolId(null)
+    }
+  }
+
+  function addToolParam() {
+    setToolParams((prev) => [...prev, { name: "", description: "", type: "string", required: true }])
+  }
+
+  function removeToolParam(idx: number) {
+    setToolParams((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  function updateToolParam(idx: number, field: keyof ToolParam, value: string | boolean) {
+    setToolParams((prev) => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p))
   }
 
   function copyShareLink() {
@@ -513,26 +602,86 @@ export default function AgentStudioPage() {
             {/* ── TOOLS TAB ── */}
             {activeTab === "tools" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div>
-                  <div style={{ fontFamily: "var(--font-sans)", fontSize: "15px", fontWeight: 600, color: "var(--white)", marginBottom: "4px" }}>
-                    Tools
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                  <div>
+                    <div style={{ fontFamily: "var(--font-sans)", fontSize: "15px", fontWeight: 600, color: "var(--white)", marginBottom: "4px" }}>
+                      Tools
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                      Connect webhooks your agent calls during conversations.
+                    </div>
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                    Connect external APIs and webhooks your agent can call during conversations.
-                  </div>
+                  <button
+                    onClick={openAddToolModal}
+                    style={{
+                      padding: "8px 14px", flexShrink: 0,
+                      background: "rgba(255,85,0,0.08)", color: "var(--orange-400)",
+                      border: "1px solid rgba(255,85,0,0.25)", borderRadius: "var(--radius)",
+                      fontFamily: "var(--font-mono)", fontSize: "11px", cursor: "pointer",
+                    }}
+                  >
+                    + add tool
+                  </button>
                 </div>
-                <div style={{
-                  background: "var(--surface-2)", border: "1px dashed var(--border-color)",
-                  borderRadius: "var(--radius-md)", padding: "48px", textAlign: "center",
-                }}>
-                  <div style={{ fontSize: "28px", marginBottom: "12px" }}>🔧</div>
-                  <div style={{ fontFamily: "var(--font-sans)", fontSize: "14px", fontWeight: 600, color: "var(--white)", marginBottom: "6px" }}>
-                    Tools — Coming Soon
+
+                {tools.length === 0 ? (
+                  <div style={{
+                    background: "var(--surface-2)", border: "1px dashed var(--border-color)",
+                    borderRadius: "var(--radius-md)", padding: "44px", textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: "24px", marginBottom: "10px" }}>🔧</div>
+                    <div style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: "var(--white)", marginBottom: "6px" }}>
+                      No tools yet
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.7 }}>
+                      Add a webhook URL and your agent will call it<br />
+                      automatically when relevant in conversation.
+                    </div>
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.7 }}>
-                    Connect Airtable, webhooks, and custom APIs<br />
-                    using OpenAPI specifications.
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {tools.map((tool) => (
+                      <div key={tool.id} style={{
+                        padding: "12px 14px", background: "var(--surface-2)", border: "var(--border)",
+                        borderRadius: "var(--radius)", display: "flex", gap: "10px", alignItems: "flex-start",
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                            <span style={{ fontSize: "12px", color: "var(--white)", fontWeight: 600 }}>
+                              {tool.name}
+                            </span>
+                            <span style={{
+                              fontSize: "9px", padding: "2px 6px",
+                              background: "rgba(255,85,0,0.08)", color: "var(--orange-400)",
+                              border: "1px solid rgba(255,85,0,0.2)", borderRadius: "var(--radius)",
+                            }}>
+                              {tool.method}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px", lineHeight: 1.5 }}>
+                            {tool.description}
+                          </div>
+                          <div style={{ fontSize: "10px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {tool.url}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteTool(tool.id)}
+                          disabled={deletingToolId === tool.id}
+                          style={{
+                            background: "none", border: "none", color: "var(--text-muted)",
+                            fontSize: "11px", cursor: "pointer", flexShrink: 0, padding: "4px",
+                          }}
+                        >
+                          {deletingToolId === tool.id ? "..." : "✕"}
+                        </button>
+                      </div>
+                    ))}
                   </div>
+                )}
+
+                <div style={{ padding: "10px 12px", background: "var(--surface-2)", borderRadius: "var(--radius)", fontSize: "10px", color: "var(--text-muted)", lineHeight: 1.7 }}>
+                  <span style={{ color: "var(--orange-400)" }}>//</span> Your agent will automatically decide when to call each tool based on the description you provide. The tool receives the arguments as JSON in the request body.
                 </div>
               </div>
             )}
@@ -759,6 +908,161 @@ export default function AgentStudioPage() {
 
             <div style={{ fontSize: "10px", color: "var(--text-muted)", lineHeight: 1.7, padding: "10px 12px", background: "var(--surface-2)", borderRadius: "var(--radius)" }}>
               Share this link to let anyone test your agent. Does not include API keys or conversation history.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Tool Modal ── */}
+      {showAddToolModal && (
+        <div onClick={() => !addingTool && setShowAddToolModal(false)} style={overlay}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: "var(--surface-1)", border: "var(--border)",
+            borderRadius: "var(--radius-md)", padding: "24px", width: "100%", maxWidth: "520px",
+            maxHeight: "90vh", overflowY: "auto",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+              <div style={{ fontFamily: "var(--font-sans)", fontSize: "16px", fontWeight: 700, color: "var(--white)" }}>
+                Add Tool
+              </div>
+              <button onClick={() => setShowAddToolModal(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "16px", cursor: "pointer" }}>✕</button>
+            </div>
+
+            {toolFormError && (
+              <div style={{ background: "rgba(255,51,51,0.06)", border: "1px solid rgba(255,51,51,0.2)", color: "var(--red)", padding: "10px 12px", fontSize: "11px", borderRadius: "var(--radius)", marginBottom: "16px" }}>
+                {toolFormError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <div style={fieldLabel}>Tool Name <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(snake_case)</span></div>
+                <input
+                  value={toolForm.name}
+                  onChange={(e) => setToolForm((f) => ({ ...f, name: e.target.value.replace(/\s/g, "_") }))}
+                  placeholder="e.g. create_lead"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <div style={fieldLabel}>Description — <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>tell the AI when to call this</span></div>
+                <textarea
+                  value={toolForm.description}
+                  onChange={(e) => setToolForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="e.g. Call this when the user wants to sign up or book a demo"
+                  rows={2}
+                  style={{ ...inputStyle, resize: "none", lineHeight: 1.5 }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={fieldLabel}>Method</div>
+                  <select
+                    value={toolForm.method}
+                    onChange={(e) => setToolForm((f) => ({ ...f, method: e.target.value }))}
+                    style={{ ...inputStyle, cursor: "pointer" }}
+                  >
+                    {["POST", "GET", "PUT", "PATCH", "DELETE"].map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: 3 }}>
+                  <div style={fieldLabel}>Webhook URL</div>
+                  <input
+                    value={toolForm.url}
+                    onChange={(e) => setToolForm((f) => ({ ...f, url: e.target.value }))}
+                    placeholder="https://..."
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <span style={fieldLabel}>Parameters <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span></span>
+                  <button
+                    onClick={addToolParam}
+                    disabled={toolParams.length >= 10}
+                    style={{
+                      padding: "4px 10px", background: "transparent",
+                      color: "var(--text-secondary)", border: "1px solid var(--border-color)",
+                      borderRadius: "var(--radius)", fontFamily: "var(--font-mono)", fontSize: "10px", cursor: "pointer",
+                    }}
+                  >
+                    + add param
+                  </button>
+                </div>
+                {toolParams.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {toolParams.map((p, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <input
+                          value={p.name}
+                          onChange={(e) => updateToolParam(idx, "name", e.target.value)}
+                          placeholder="param_name"
+                          style={{ ...inputStyle, flex: 2, fontSize: "11px", padding: "7px 10px" }}
+                        />
+                        <input
+                          value={p.description}
+                          onChange={(e) => updateToolParam(idx, "description", e.target.value)}
+                          placeholder="description"
+                          style={{ ...inputStyle, flex: 3, fontSize: "11px", padding: "7px 10px" }}
+                        />
+                        <select
+                          value={p.type}
+                          onChange={(e) => updateToolParam(idx, "type", e.target.value)}
+                          style={{ ...inputStyle, flex: 1, fontSize: "10px", padding: "7px 6px" }}
+                        >
+                          <option value="string">str</option>
+                          <option value="number">num</option>
+                          <option value="boolean">bool</option>
+                        </select>
+                        <button
+                          onClick={() => removeToolParam(idx)}
+                          style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "12px", cursor: "pointer", padding: "4px", flexShrink: 0 }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {toolParams.length === 0 && (
+                  <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                    No parameters — the agent will call the URL with only the conversation context.
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                <button
+                  onClick={addTool}
+                  disabled={addingTool}
+                  style={{
+                    flex: 1, padding: "11px", background: addingTool ? "var(--surface-3)" : "var(--orange-500)",
+                    color: "#fff", border: "none", borderRadius: "var(--radius)",
+                    fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700,
+                    cursor: addingTool ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {addingTool ? "// adding..." : "> add tool"}
+                </button>
+                <button
+                  onClick={() => setShowAddToolModal(false)}
+                  disabled={addingTool}
+                  style={{
+                    padding: "11px 20px", background: "transparent",
+                    color: "var(--text-secondary)", border: "1px solid var(--border-color)",
+                    borderRadius: "var(--radius)", fontFamily: "var(--font-mono)", fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

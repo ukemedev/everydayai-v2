@@ -74,7 +74,7 @@ Located at `artifacts/everydayai-v2/`. A Next.js 16 AI agent builder platform si
 ### Phase Roadmap
 - Phase 1 ✅ — Fix "Failed to load agents", agents list page, create agent modal
 - Phase 2 ✅ — Agent Studio (Prompt, Knowledge, Live Chat, Deploy, Share, Versions)
-- Phase 3 — Tools system (webhooks/API tools), mobile responsive sidebar
+- Phase 3 ✅ — Tools system (webhooks/API tools with function calling), mobile responsive sidebar
 - Phase 4 — Deploy modal (website widget embed), per-agent widget page
 - Phase 5 — Share + template system
 - Phase 6 — Settings, Billing (Paystack), Knowledge base management page

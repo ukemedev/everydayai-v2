@@ -41,6 +41,7 @@
   --text-muted: var(--gray-600);
   --border-color: #222222;
   --topbar-bg: rgba(8,8,8,0.92);
+  --sidebar-width: 220px;
 }
 
 html { background: var(--bg); }
@@ -56,3 +57,10 @@ body {
 ::-webkit-scrollbar-track { background: var(--surface-0); }
 ::-webkit-scrollbar-thumb { background: var(--surface-3); }
 ::-webkit-scrollbar-thumb:hover { background: var(--orange-500); }
+
+/* ── Mobile responsive layout ── */
+@media (max-width: 768px) {
+  .dashboard-main {
+    margin-left: 0 !important;
+  }
+}
