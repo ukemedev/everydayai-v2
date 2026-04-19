@@ -1,18 +1,15 @@
-import { auth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
+import { ensureUser } from "@/lib/ensure-user"
 import { db } from "@/lib/db"
 import OpenAI from "openai"
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params
-  const { userId } = await auth()
-  if (!userId) return new NextResponse("Unauthorized", { status: 401 })
-
-  const user = await db.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return new NextResponse("User not found", { status: 404 })
+  const user = await ensureUser()
+  if (!user) return new NextResponse("Unauthorized", { status: 401 })
 
   const agent = await db.agent.findFirst({
     where: { id: Number(agentId), ownerId: user.id },
@@ -28,11 +25,8 @@ export async function PUT(
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params
-  const { userId } = await auth()
-  if (!userId) return new NextResponse("Unauthorized", { status: 401 })
-
-  const user = await db.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return new NextResponse("User not found", { status: 404 })
+  const user = await ensureUser()
+  if (!user) return new NextResponse("Unauthorized", { status: 401 })
 
   const agent = await db.agent.findFirst({
     where: { id: Number(agentId), ownerId: user.id },
@@ -50,15 +44,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params
-  const { userId } = await auth()
-  if (!userId) return new NextResponse("Unauthorized", { status: 401 })
-
-  const user = await db.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return new NextResponse("User not found", { status: 404 })
+  const user = await ensureUser()
+  if (!user) return new NextResponse("Unauthorized", { status: 401 })
 
   const agent = await db.agent.findFirst({
     where: { id: Number(agentId), ownerId: user.id },
@@ -66,12 +57,16 @@ export async function DELETE(
   if (!agent) return new NextResponse("Agent not found", { status: 404 })
 
   if (user.openaiApiKey) {
-    const client = new OpenAI({ apiKey: user.openaiApiKey })
-    if (agent.openaiAssistantId) {
-      await client.beta.assistants.delete(agent.openaiAssistantId)
-    }
-    if (agent.openaiVectorStoreId) {
-      await client.vectorStores.delete(agent.openaiVectorStoreId)
+    try {
+      const client = new OpenAI({ apiKey: user.openaiApiKey })
+      if (agent.openaiAssistantId) {
+        await client.beta.assistants.delete(agent.openaiAssistantId)
+      }
+      if (agent.openaiVectorStoreId) {
+        await client.vectorStores.delete(agent.openaiVectorStoreId)
+      }
+    } catch {
+      // OpenAI cleanup failed — proceed with DB delete anyway
     }
   }
 
