@@ -10,8 +10,20 @@ export async function PUT(req: Request) {
 
   await db.user.update({
     where: { id: user.id },
-    data: { openaiApiKey },
+    data: { openaiApiKey: openaiApiKey || null },
   })
 
   return NextResponse.json({ message: "API key saved" })
+}
+
+export async function DELETE() {
+  const user = await ensureUser()
+  if (!user) return new NextResponse("Unauthorized", { status: 401 })
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { openaiApiKey: null },
+  })
+
+  return NextResponse.json({ message: "API key cleared" })
 }
