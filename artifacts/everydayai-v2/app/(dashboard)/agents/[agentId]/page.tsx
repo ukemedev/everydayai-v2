@@ -99,6 +99,9 @@ export default function AgentStudioPage() {
   const [showSharePanel, setShowSharePanel] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const [showVersionModal, setShowVersionModal] = useState(false)
+  const [showEmbedModal, setShowEmbedModal] = useState(false)
+  const [embedTab, setEmbedTab] = useState<"widget" | "iframe">("widget")
+  const [embedCopied, setEmbedCopied] = useState<"widget" | "iframe" | null>(null)
 
   // Knowledge
   const [uploadingFile, setUploadingFile] = useState(false)
@@ -365,9 +368,14 @@ export default function AgentStudioPage() {
             </button>
           )}
           {agent.isPublished && (
-            <button onClick={() => setShowSharePanel(!showSharePanel)} style={btnOutline}>
-              ↗ share
-            </button>
+            <>
+              <button onClick={() => setShowSharePanel(!showSharePanel)} style={btnOutline}>
+                ↗ share
+              </button>
+              <button onClick={() => setShowEmbedModal(true)} style={btnOutline}>
+                {"</>"}  embed
+              </button>
+            </>
           )}
           <button onClick={() => setShowVersionModal(true)} style={btnOutline}>
             ⊞ versions
@@ -909,6 +917,134 @@ export default function AgentStudioPage() {
             <div style={{ fontSize: "10px", color: "var(--text-muted)", lineHeight: 1.7, padding: "10px 12px", background: "var(--surface-2)", borderRadius: "var(--radius)" }}>
               Share this link to let anyone test your agent. Does not include API keys or conversation history.
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Embed Modal ── */}
+      {showEmbedModal && agent.widgetToken && (
+        <div onClick={() => setShowEmbedModal(false)} style={overlay}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: "var(--surface-1)", border: "var(--border)",
+            borderRadius: "var(--radius-md)", padding: "24px", width: "100%", maxWidth: "580px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+              <div style={{ fontFamily: "var(--font-sans)", fontSize: "16px", fontWeight: 700, color: "var(--white)" }}>
+                Embed Your Agent
+              </div>
+              <button onClick={() => setShowEmbedModal(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "16px", cursor: "pointer" }}>✕</button>
+            </div>
+
+            {/* Embed tabs */}
+            <div style={{ display: "flex", gap: "2px", marginBottom: "16px", borderBottom: "var(--border)", paddingBottom: "0" }}>
+              {(["widget", "iframe"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setEmbedTab(t)}
+                  style={{
+                    padding: "7px 16px",
+                    background: embedTab === t ? "var(--surface-2)" : "transparent",
+                    border: embedTab === t ? "1px solid var(--border-color)" : "1px solid transparent",
+                    borderBottom: embedTab === t ? "1px solid var(--surface-2)" : "1px solid transparent",
+                    borderRadius: "var(--radius) var(--radius) 0 0",
+                    color: embedTab === t ? "var(--white)" : "var(--text-muted)",
+                    fontFamily: "var(--font-mono)", fontSize: "11px", cursor: "pointer",
+                    marginBottom: "-1px",
+                  }}
+                >
+                  {t === "widget" ? "⬡ Floating Widget" : "⬜ Iframe Embed"}
+                </button>
+              ))}
+            </div>
+
+            {embedTab === "widget" && (() => {
+              const scriptTag = `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/api/widget/${agent.widgetToken}/script" defer></script>`
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.7 }}>
+                    Paste this single line before the closing <code style={{ color: "var(--orange-400)" }}>&lt;/body&gt;</code> tag on any webpage. It adds a floating orange chat button in the bottom-right corner.
+                  </div>
+                  <div style={{ position: "relative" }}>
+                    <pre style={{
+                      padding: "14px", background: "var(--surface-0)", border: "var(--border)",
+                      borderRadius: "var(--radius)", fontSize: "11px", color: "var(--orange-300)",
+                      overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all",
+                      fontFamily: "var(--font-mono)", lineHeight: 1.6,
+                    }}>
+                      {scriptTag}
+                    </pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(scriptTag)
+                        setEmbedCopied("widget")
+                        setTimeout(() => setEmbedCopied(null), 2000)
+                      }}
+                      style={{
+                        position: "absolute", top: "8px", right: "8px",
+                        padding: "4px 10px", background: "var(--surface-2)",
+                        border: "var(--border)", borderRadius: "var(--radius)",
+                        color: embedCopied === "widget" ? "var(--green-term)" : "var(--text-secondary)",
+                        fontFamily: "var(--font-mono)", fontSize: "10px", cursor: "pointer",
+                      }}
+                    >
+                      {embedCopied === "widget" ? "✓ copied" : "copy"}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: "10px", color: "var(--text-muted)", padding: "10px 12px", background: "var(--surface-2)", borderRadius: "var(--radius)", lineHeight: 1.7 }}>
+                    <span style={{ color: "var(--orange-400)" }}>//</span> Works on any website — React, WordPress, Webflow, Squarespace, raw HTML. The widget loads asynchronously and does not slow down your page.
+                  </div>
+                </div>
+              )
+            })()}
+
+            {embedTab === "iframe" && (() => {
+              const chatUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/chat/${agent.widgetToken}`
+              const iframeCode = `<iframe\n  src="${chatUrl}"\n  width="400"\n  height="600"\n  style="border:none;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,0.3);"\n  allow="microphone"\n></iframe>`
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.7 }}>
+                    Embed the full chat interface directly in your page using an iframe. You can customise width, height, and border-radius freely.
+                  </div>
+                  <div style={{ position: "relative" }}>
+                    <pre style={{
+                      padding: "14px", background: "var(--surface-0)", border: "var(--border)",
+                      borderRadius: "var(--radius)", fontSize: "11px", color: "var(--orange-300)",
+                      overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all",
+                      fontFamily: "var(--font-mono)", lineHeight: 1.6,
+                    }}>
+                      {iframeCode}
+                    </pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(iframeCode)
+                        setEmbedCopied("iframe")
+                        setTimeout(() => setEmbedCopied(null), 2000)
+                      }}
+                      style={{
+                        position: "absolute", top: "8px", right: "8px",
+                        padding: "4px 10px", background: "var(--surface-2)",
+                        border: "var(--border)", borderRadius: "var(--radius)",
+                        color: embedCopied === "iframe" ? "var(--green-term)" : "var(--text-secondary)",
+                        fontFamily: "var(--font-mono)", fontSize: "10px", cursor: "pointer",
+                      }}
+                    >
+                      {embedCopied === "iframe" ? "✓ copied" : "copy"}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    Direct chat page link:{" "}
+                    <a
+                      href={chatUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "var(--orange-400)", textDecoration: "none" }}
+                    >
+                      {chatUrl}
+                    </a>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
