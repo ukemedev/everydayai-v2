@@ -198,7 +198,7 @@ export default function KnowledgePage() {
               key={agent.id}
               onClick={() => setSelectedId(agent.id)}
               style={{
-                width: "100%", padding: "12px 14px", background: "none", border: "none",
+                width: "100%", padding: "12px 14px", border: "none",
                 borderBottom: "var(--border)", textAlign: "left", cursor: "pointer",
                 display: "flex", flexDirection: "column", gap: "3px",
                 background: selectedId === agent.id ? "rgba(255,85,0,0.06)" : "transparent",

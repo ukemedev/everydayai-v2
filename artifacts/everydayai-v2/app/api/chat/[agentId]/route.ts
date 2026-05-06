@@ -85,14 +85,16 @@ async function runChat(
       const outputs = await Promise.all(
         toolCalls.map((tc) => executeToolCall(tc, tools))
       )
-      run = await client.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      run = await (client.beta.threads.runs as any).submitToolOutputs(thread.id, run.id, {
         tool_outputs: outputs,
       })
       continue
     }
 
     await new Promise((r) => setTimeout(r, 800))
-    run = await client.beta.threads.runs.retrieve(thread.id, run.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    run = await (client.beta.threads.runs as any).retrieve(thread.id, run.id)
   }
 
   const messages = await client.beta.threads.messages.list(thread.id)

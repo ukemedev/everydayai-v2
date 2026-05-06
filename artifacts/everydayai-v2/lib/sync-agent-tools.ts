@@ -16,11 +16,11 @@ export async function syncToolsToAssistant(
     function: {
       name: tool.name,
       description: tool.description,
-      parameters: (tool.parameters as object) ?? {
+      parameters: ((tool.parameters as Record<string, unknown>) ?? {
         type: "object",
         properties: {},
         required: [],
-      },
+      }) as Record<string, unknown>,
     },
   }))
 

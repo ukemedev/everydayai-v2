@@ -50,11 +50,13 @@ async function runChat(
     if (run.status === "requires_action") {
       const tcs = run.required_action!.submit_tool_outputs.tool_calls
       const outputs = await Promise.all(tcs.map((tc) => executeToolCall(tc, tools)))
-      run = await client.beta.threads.runs.submitToolOutputs(thread.id, run.id, { tool_outputs: outputs })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      run = await (client.beta.threads.runs as any).submitToolOutputs(thread.id, run.id, { tool_outputs: outputs })
       continue
     }
     await new Promise((r) => setTimeout(r, 800))
-    run = await client.beta.threads.runs.retrieve(thread.id, run.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    run = await (client.beta.threads.runs as any).retrieve(thread.id, run.id)
   }
 
   const msgs = await client.beta.threads.messages.list(thread.id)
