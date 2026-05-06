@@ -76,5 +76,5 @@ Located at `artifacts/everydayai-v2/`. A Next.js 16 AI agent builder platform si
 - Phase 2 ✅ — Agent Studio (Prompt, Knowledge, Live Chat, Deploy, Share, Versions)
 - Phase 3 ✅ — Tools system (webhooks/API tools with function calling), mobile responsive sidebar
 - Phase 4 ✅ — Public chat page (/chat/[token]), floating widget embed script, iframe embed, embed modal in Studio
-- Phase 5 — Share + template system
+- Phase 5 ✅ — Templates gallery (10 system templates), save-as-template from agent cards, community templates, "use template" clones agent directly into Studio
 - Phase 6 — Settings, Billing (Paystack), Knowledge base management page

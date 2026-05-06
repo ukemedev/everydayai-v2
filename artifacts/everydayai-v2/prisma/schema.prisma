@@ -28,6 +28,8 @@ model Agent {
   openaiVectorStoreId  String?
   isPublished          Boolean         @default(false)
   widgetToken          String?         @unique
+  isTemplate           Boolean         @default(false)
+  templateCategory     String?
   ownerId              String
   owner                User            @relation(fields: [ownerId], references: [id])
   createdAt            DateTime        @default(now())

@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import axios from "axios"
+import { TEMPLATE_CATEGORIES } from "@/lib/system-templates"
 
 interface Agent {
   id: number
@@ -10,6 +12,7 @@ interface Agent {
   description: string | null
   model: string
   isPublished: boolean
+  isTemplate: boolean
   widgetToken: string | null
   createdAt: string
 }
@@ -21,29 +24,20 @@ const MODELS = [
 ]
 
 export default function AgentsPage() {
+  const router = useRouter()
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    systemPrompt: "",
-    model: "gpt-4o-mini",
-  })
+  const [form, setForm] = useState({ name: "", description: "", systemPrompt: "", model: "gpt-4o-mini" })
   const [error, setError] = useState("")
   const [formError, setFormError] = useState("")
-  const [copied, setCopied] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [togglingTemplateId, setTogglingTemplateId] = useState<number | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    fetchAgents()
-  }, [])
-
-  useEffect(() => {
-    if (showModal) setTimeout(() => nameRef.current?.focus(), 50)
-  }, [showModal])
+  useEffect(() => { fetchAgents() }, [])
+  useEffect(() => { if (showModal) setTimeout(() => nameRef.current?.focus(), 50) }, [showModal])
 
   async function fetchAgents() {
     setLoading(true)
@@ -109,18 +103,23 @@ export default function AgentsPage() {
     }
   }
 
-  function copyEmbed(agent: Agent) {
-    const appUrl = window.location.origin
-    const code = `<script src="${appUrl}/widget.js" data-token="${agent.widgetToken}" data-url="${appUrl}"></script>`
-    navigator.clipboard.writeText(code)
-    setCopied(agent.id)
-    setTimeout(() => setCopied(null), 2000)
+  async function toggleTemplate(agent: Agent) {
+    setTogglingTemplateId(agent.id)
+    try {
+      const res = await axios.post(`/api/agents/${agent.id}/template`, {
+        templateCategory: "Support",
+      })
+      setAgents((prev) => prev.map((a) => a.id === agent.id ? { ...a, isTemplate: res.data.isTemplate } : a))
+    } catch {
+      // ignore
+    } finally {
+      setTogglingTemplateId(null)
+    }
   }
 
   return (
     <>
       <div style={{ padding: "28px", maxWidth: "960px" }}>
-        {/* Page header */}
         <div style={{
           fontSize: "9px", color: "var(--text-muted)", letterSpacing: "0.1em",
           textTransform: "uppercase", marginBottom: "18px",
@@ -140,20 +139,30 @@ export default function AgentsPage() {
               {loading ? "loading..." : `${agents.length} agent${agents.length !== 1 ? "s" : ""} created`}
             </p>
           </div>
-          <button
-            onClick={openModal}
-            style={{
-              padding: "10px 20px", background: "var(--orange-500)", color: "#fff",
-              border: "none", borderRadius: "var(--radius)", fontFamily: "var(--font-mono)",
-              fontSize: "12px", fontWeight: 700, cursor: "pointer", flexShrink: 0,
-              transition: "var(--transition)",
-            }}
-          >
-            + new agent
-          </button>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <Link
+              href="/templates"
+              style={{
+                padding: "10px 16px", background: "var(--surface-2)", color: "var(--text-secondary)",
+                border: "var(--border)", borderRadius: "var(--radius)", fontFamily: "var(--font-mono)",
+                fontSize: "11px", cursor: "pointer", textDecoration: "none", flexShrink: 0,
+              }}
+            >
+              ⬡ browse templates
+            </Link>
+            <button
+              onClick={openModal}
+              style={{
+                padding: "10px 20px", background: "var(--orange-500)", color: "#fff",
+                border: "none", borderRadius: "var(--radius)", fontFamily: "var(--font-mono)",
+                fontSize: "12px", fontWeight: 700, cursor: "pointer", flexShrink: 0,
+              }}
+            >
+              + new agent
+            </button>
+          </div>
         </div>
 
-        {/* Error banner */}
         {error && (
           <div style={{
             background: "rgba(255,51,51,0.06)", border: "1px solid rgba(255,51,51,0.25)",
@@ -168,7 +177,6 @@ export default function AgentsPage() {
           </div>
         )}
 
-        {/* Content */}
         {loading ? (
           <div style={{ fontSize: "12px", color: "var(--text-muted)", padding: "20px 0" }}>
             // loading agents...
@@ -182,19 +190,31 @@ export default function AgentsPage() {
             <div style={{ fontFamily: "var(--font-sans)", fontSize: "18px", fontWeight: 600, color: "var(--white)", marginBottom: "8px" }}>
               No agents yet
             </div>
-            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "24px" }}>
-              Create your first agent to get started
+            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "24px", lineHeight: 1.6 }}>
+              Create from scratch or start from a template
             </div>
-            <button
-              onClick={openModal}
-              style={{
-                padding: "10px 24px", background: "var(--orange-500)", color: "#fff",
-                border: "none", borderRadius: "var(--radius)", fontFamily: "var(--font-mono)",
-                fontSize: "12px", fontWeight: 700, cursor: "pointer",
-              }}
-            >
-              + create agent
-            </button>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+              <Link
+                href="/templates"
+                style={{
+                  padding: "10px 20px", background: "var(--surface-2)", color: "var(--text-secondary)",
+                  border: "var(--border)", borderRadius: "var(--radius)", fontFamily: "var(--font-mono)",
+                  fontSize: "11px", textDecoration: "none",
+                }}
+              >
+                ⬡ browse templates
+              </Link>
+              <button
+                onClick={openModal}
+                style={{
+                  padding: "10px 24px", background: "var(--orange-500)", color: "#fff",
+                  border: "none", borderRadius: "var(--radius)", fontFamily: "var(--font-mono)",
+                  fontSize: "12px", fontWeight: 700, cursor: "pointer",
+                }}
+              >
+                + create agent
+              </button>
+            </div>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: "16px" }}>
@@ -203,9 +223,9 @@ export default function AgentsPage() {
                 key={agent.id}
                 agent={agent}
                 deleting={deletingId === agent.id}
-                copied={copied === agent.id}
+                togglingTemplate={togglingTemplateId === agent.id}
                 onDelete={() => deleteAgent(agent.id)}
-                onCopyEmbed={() => copyEmbed(agent)}
+                onToggleTemplate={() => toggleTemplate(agent)}
               />
             ))}
           </div>
@@ -214,23 +234,14 @@ export default function AgentsPage() {
 
       {/* Create Agent Modal */}
       {showModal && (
-        <div
-          onClick={closeModal}
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
-            zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "16px",
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "var(--surface-1)", border: "var(--border)",
-              borderRadius: "var(--radius-md)", width: "100%", maxWidth: "480px",
-              padding: "28px",
-            }}
-          >
-            {/* Modal header */}
+        <div onClick={closeModal} style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+          zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
+        }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: "var(--surface-1)", border: "var(--border)",
+            borderRadius: "var(--radius-md)", width: "100%", maxWidth: "480px", padding: "28px",
+          }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
               <div>
                 <div style={{ fontSize: "9px", color: "var(--orange-500)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "4px" }}>
@@ -240,69 +251,33 @@ export default function AgentsPage() {
                   Create a New Agent
                 </h2>
               </div>
-              <button
-                onClick={closeModal}
-                disabled={creating}
-                style={{
-                  background: "none", border: "none", color: "var(--text-muted)",
-                  fontSize: "18px", cursor: "pointer", padding: "4px", lineHeight: 1,
-                }}
-              >
+              <button onClick={closeModal} disabled={creating} style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "18px", cursor: "pointer", padding: "4px" }}>
                 ✕
               </button>
             </div>
 
-            {/* Form */}
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {/* Name */}
               <div>
-                <label style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: "6px" }}>
-                  Agent Name *
-                </label>
-                <input
-                  ref={nameRef}
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  onKeyDown={(e) => e.key === "Enter" && createAgent()}
-                  placeholder="e.g. Customer Support Bot"
-                  maxLength={80}
-                  style={inputStyle}
-                />
+                <label style={labelStyle}>Agent Name *</label>
+                <input ref={nameRef} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && createAgent()} placeholder="e.g. Customer Support Bot" maxLength={80} style={inputStyle} />
               </div>
 
-              {/* Description */}
               <div>
-                <label style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: "6px" }}>
-                  Description
-                </label>
-                <input
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Describe what this agent does"
-                  maxLength={160}
-                  style={inputStyle}
-                />
+                <label style={labelStyle}>Description</label>
+                <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Describe what this agent does" maxLength={160} style={inputStyle} />
               </div>
 
-              {/* Model */}
               <div>
-                <label style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: "6px" }}>
-                  Model
-                </label>
+                <label style={labelStyle}>Model</label>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   {MODELS.map((m) => (
-                    <button
-                      key={m.value}
-                      onClick={() => setForm({ ...form, model: m.value })}
-                      style={{
-                        padding: "8px 14px", borderRadius: "var(--radius)",
-                        border: form.model === m.value ? "1px solid var(--orange-500)" : "1px solid var(--border-color)",
-                        background: form.model === m.value ? "rgba(255,85,0,0.08)" : "var(--surface-2)",
-                        color: form.model === m.value ? "var(--orange-400)" : "var(--text-secondary)",
-                        fontFamily: "var(--font-mono)", fontSize: "11px", cursor: "pointer",
-                        transition: "var(--transition)",
-                      }}
-                    >
+                    <button key={m.value} onClick={() => setForm({ ...form, model: m.value })} style={{
+                      padding: "8px 14px", borderRadius: "var(--radius)",
+                      border: form.model === m.value ? "1px solid var(--orange-500)" : "1px solid var(--border-color)",
+                      background: form.model === m.value ? "rgba(255,85,0,0.08)" : "var(--surface-2)",
+                      color: form.model === m.value ? "var(--orange-400)" : "var(--text-secondary)",
+                      fontFamily: "var(--font-mono)", fontSize: "11px", cursor: "pointer",
+                    }}>
                       <span style={{ fontWeight: 700 }}>{m.label}</span>
                       <span style={{ color: "var(--text-muted)", marginLeft: "6px", fontSize: "9px" }}>{m.note}</span>
                     </button>
@@ -310,41 +285,25 @@ export default function AgentsPage() {
                 </div>
               </div>
 
-              {/* Form error */}
               {formError && (
-                <div style={{
-                  background: "rgba(255,51,51,0.06)", border: "1px solid rgba(255,51,51,0.2)",
-                  color: "var(--red)", padding: "10px 12px", fontSize: "11px",
-                  borderRadius: "var(--radius)", lineHeight: 1.5,
-                }}>
+                <div style={{ background: "rgba(255,51,51,0.06)", border: "1px solid rgba(255,51,51,0.2)", color: "var(--red)", padding: "10px 12px", fontSize: "11px", borderRadius: "var(--radius)" }}>
                   {formError}
                 </div>
               )}
 
-              {/* Actions */}
               <div style={{ display: "flex", gap: "10px", paddingTop: "4px" }}>
-                <button
-                  onClick={createAgent}
-                  disabled={creating}
-                  style={{
-                    flex: 1, padding: "11px", background: creating ? "var(--surface-3)" : "var(--orange-500)",
-                    color: "#fff", border: "none", borderRadius: "var(--radius)",
-                    fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700,
-                    cursor: creating ? "not-allowed" : "pointer", transition: "var(--transition)",
-                  }}
-                >
+                <button onClick={createAgent} disabled={creating} style={{
+                  flex: 1, padding: "11px", background: creating ? "var(--surface-3)" : "var(--orange-500)",
+                  color: "#fff", border: "none", borderRadius: "var(--radius)",
+                  fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700, cursor: creating ? "not-allowed" : "pointer",
+                }}>
                   {creating ? "// creating..." : "> create agent"}
                 </button>
-                <button
-                  onClick={closeModal}
-                  disabled={creating}
-                  style={{
-                    padding: "11px 20px", background: "transparent",
-                    color: "var(--text-secondary)", border: "1px solid var(--border-color)",
-                    borderRadius: "var(--radius)", fontFamily: "var(--font-mono)", fontSize: "12px",
-                    cursor: creating ? "not-allowed" : "pointer",
-                  }}
-                >
+                <button onClick={closeModal} disabled={creating} style={{
+                  padding: "11px 20px", background: "transparent", color: "var(--text-secondary)",
+                  border: "1px solid var(--border-color)", borderRadius: "var(--radius)",
+                  fontFamily: "var(--font-mono)", fontSize: "12px", cursor: creating ? "not-allowed" : "pointer",
+                }}>
                   cancel
                 </button>
               </div>
@@ -359,24 +318,22 @@ export default function AgentsPage() {
 function AgentCard({
   agent,
   deleting,
-  copied,
+  togglingTemplate,
   onDelete,
-  onCopyEmbed,
+  onToggleTemplate,
 }: {
   agent: Agent
   deleting: boolean
-  copied: boolean
+  togglingTemplate: boolean
   onDelete: () => void
-  onCopyEmbed: () => void
+  onToggleTemplate: () => void
 }) {
   return (
     <div style={{
       background: "var(--surface-1)", border: "var(--border)",
       borderRadius: "var(--radius-md)", padding: "20px",
       display: "flex", flexDirection: "column", gap: "14px",
-      transition: "var(--transition)",
     }}>
-      {/* Card header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
         <div style={{ minWidth: 0 }}>
           <div style={{
@@ -388,53 +345,59 @@ function AgentCard({
           </div>
           <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{agent.model}</div>
         </div>
-        <span style={{
-          fontSize: "9px", padding: "3px 8px", borderRadius: "var(--radius)", flexShrink: 0,
-          background: agent.isPublished ? "rgba(0,255,136,0.06)" : "rgba(255,85,0,0.06)",
-          color: agent.isPublished ? "var(--green-term)" : "var(--orange-400)",
-          border: `1px solid ${agent.isPublished ? "rgba(0,255,136,0.2)" : "rgba(255,85,0,0.2)"}`,
-        }}>
-          {agent.isPublished ? "● live" : "○ draft"}
-        </span>
+        <div style={{ display: "flex", gap: "5px", flexShrink: 0 }}>
+          {agent.isTemplate && (
+            <span style={{
+              fontSize: "9px", padding: "3px 7px", borderRadius: "var(--radius)",
+              background: "rgba(255,85,0,0.08)", color: "var(--orange-400)",
+              border: "1px solid rgba(255,85,0,0.2)",
+            }}>
+              ⬡ template
+            </span>
+          )}
+          <span style={{
+            fontSize: "9px", padding: "3px 8px", borderRadius: "var(--radius)",
+            background: agent.isPublished ? "rgba(0,255,136,0.06)" : "rgba(255,85,0,0.06)",
+            color: agent.isPublished ? "var(--green-term)" : "var(--orange-400)",
+            border: `1px solid ${agent.isPublished ? "rgba(0,255,136,0.2)" : "rgba(255,85,0,0.2)"}`,
+          }}>
+            {agent.isPublished ? "● live" : "○ draft"}
+          </span>
+        </div>
       </div>
 
-      {/* Description */}
       {agent.description && (
         <div style={{
           fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.6,
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-          overflow: "hidden",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
         }}>
           {agent.description}
         </div>
       )}
 
-      {/* Actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "auto" }}>
-        <Link
-          href={`/agents/${agent.id}`}
-          style={{
-            display: "block", padding: "9px 14px", background: "var(--orange-500)",
-            color: "#fff", border: "none", borderRadius: "var(--radius)",
-            fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700,
-            cursor: "pointer", textDecoration: "none", textAlign: "center",
-          }}
-        >
+        <Link href={`/agents/${agent.id}`} style={{
+          display: "block", padding: "9px 14px", background: "var(--orange-500)",
+          color: "#fff", border: "none", borderRadius: "var(--radius)",
+          fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700,
+          cursor: "pointer", textDecoration: "none", textAlign: "center",
+        }}>
           ▶ open studio
         </Link>
-        {agent.isPublished && (
-          <button
-            onClick={onCopyEmbed}
-            style={{
-              padding: "8px 14px", background: "rgba(0,255,136,0.06)",
-              color: "var(--green-term)", border: "1px solid rgba(0,255,136,0.2)",
-              borderRadius: "var(--radius)", fontFamily: "var(--font-mono)",
-              fontSize: "11px", cursor: "pointer",
-            }}
-          >
-            {copied ? "✓ copied!" : "{ } copy embed"}
-          </button>
-        )}
+        <button
+          onClick={onToggleTemplate}
+          disabled={togglingTemplate}
+          style={{
+            padding: "8px 14px",
+            background: agent.isTemplate ? "rgba(255,85,0,0.08)" : "transparent",
+            color: agent.isTemplate ? "var(--orange-400)" : "var(--text-muted)",
+            border: agent.isTemplate ? "1px solid rgba(255,85,0,0.2)" : "1px solid var(--border-color)",
+            borderRadius: "var(--radius)", fontFamily: "var(--font-mono)", fontSize: "11px",
+            cursor: togglingTemplate ? "not-allowed" : "pointer",
+          }}
+        >
+          {togglingTemplate ? "..." : agent.isTemplate ? "⬡ remove from templates" : "⬡ share as template"}
+        </button>
         <button
           onClick={onDelete}
           disabled={deleting}
@@ -442,8 +405,7 @@ function AgentCard({
             padding: "8px 14px", background: "rgba(255,51,51,0.04)",
             color: deleting ? "var(--text-muted)" : "var(--red)",
             border: "1px solid rgba(255,51,51,0.15)", borderRadius: "var(--radius)",
-            fontFamily: "var(--font-mono)", fontSize: "11px",
-            cursor: deleting ? "not-allowed" : "pointer",
+            fontFamily: "var(--font-mono)", fontSize: "11px", cursor: deleting ? "not-allowed" : "pointer",
           }}
         >
           {deleting ? "// deleting..." : "delete"}
@@ -451,6 +413,11 @@ function AgentCard({
       </div>
     </div>
   )
+}
+
+const labelStyle: React.CSSProperties = {
+  fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase",
+  letterSpacing: "0.1em", display: "block", marginBottom: "6px",
 }
 
 const inputStyle: React.CSSProperties = {

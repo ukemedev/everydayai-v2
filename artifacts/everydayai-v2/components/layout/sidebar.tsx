@@ -8,9 +8,10 @@ import { UserButton } from "@clerk/nextjs"
 const navItems = [
   { prefix: "01", label: "dashboard", href: "/dashboard" },
   { prefix: "02", label: "agents", href: "/agents" },
-  { prefix: "03", label: "knowledge", href: "/knowledge" },
-  { prefix: "04", label: "billing", href: "/billing" },
-  { prefix: "05", label: "settings", href: "/settings" },
+  { prefix: "03", label: "templates", href: "/templates" },
+  { prefix: "04", label: "knowledge", href: "/knowledge" },
+  { prefix: "05", label: "billing", href: "/billing" },
+  { prefix: "06", label: "settings", href: "/settings" },
 ]
 
 export default function Sidebar() {
@@ -28,7 +29,6 @@ export default function Sidebar() {
     return () => window.removeEventListener("resize", check)
   }, [])
 
-  // Close sidebar on navigation (mobile)
   useEffect(() => {
     if (isMobile) setIsOpen(false)
   }, [pathname, isMobile])
@@ -51,23 +51,14 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ── Mobile hamburger ── */}
       {isMobile && (
         <button
           onClick={() => setIsOpen((o) => !o)}
           style={{
-            position: "fixed",
-            top: "12px",
-            left: "12px",
-            zIndex: 200,
-            background: "var(--surface-1)",
-            border: "var(--border)",
-            borderRadius: "var(--radius)",
-            color: "var(--white)",
-            padding: "7px 10px",
-            cursor: "pointer",
-            fontSize: "13px",
-            lineHeight: 1,
+            position: "fixed", top: "12px", left: "12px", zIndex: 200,
+            background: "var(--surface-1)", border: "var(--border)",
+            borderRadius: "var(--radius)", color: "var(--white)",
+            padding: "7px 10px", cursor: "pointer", fontSize: "13px", lineHeight: 1,
           }}
           aria-label="Toggle menu"
         >
@@ -75,16 +66,10 @@ export default function Sidebar() {
         </button>
       )}
 
-      {/* ── Mobile backdrop ── */}
       {isMobile && isOpen && (
         <div
           onClick={() => setIsOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            zIndex: 99,
-          }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 99 }}
         />
       )}
 
@@ -105,21 +90,16 @@ export default function Sidebar() {
             // navigation
           </div>
           {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href)
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
             return (
               <Link key={item.href} href={item.href} style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "9px 10px",
-                borderRadius: "var(--radius)",
+                display: "flex", alignItems: "center", gap: "10px",
+                padding: "9px 10px", borderRadius: "var(--radius)",
                 color: isActive ? "var(--orange-400)" : "var(--text-secondary)",
                 background: isActive ? "rgba(255,85,0,0.08)" : "transparent",
                 border: isActive ? "1px solid rgba(255,85,0,0.2)" : "1px solid transparent",
-                fontSize: "12px",
-                marginBottom: "2px",
-                textDecoration: "none",
-                transition: "var(--transition)",
+                fontSize: "12px", marginBottom: "2px",
+                textDecoration: "none", transition: "var(--transition)",
               }}>
                 <span style={{ color: isActive ? "var(--orange-500)" : "var(--text-muted)", fontSize: "11px", width: "14px" }}>
                   {item.prefix}
@@ -131,11 +111,8 @@ export default function Sidebar() {
         </nav>
 
         <div style={{
-          padding: "12px 10px",
-          borderTop: "var(--border)",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
+          padding: "12px 10px", borderTop: "var(--border)",
+          display: "flex", alignItems: "center", gap: "10px",
         }}>
           <UserButton />
           <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>account</span>
